@@ -2,7 +2,6 @@ import os
 import tkinter.ttk as ttk
 from tkinter import *
 import tkinter.messagebox as msgbox
-import tkinter.messagebox as msgbox
 from tkinter import filedialog
 from PIL import Image
 
