@@ -32,6 +32,7 @@ def del_file():
 def brows_dest_path():
     folder_selected = filedialog.askdirectory()
     if folder_selected == '':  # 사용자가 취소를 누를 때
+        print("폴더 선택 취소")
         return
     txt_dest_path.delete(0, END)
     txt_dest_path.insert(0, folder_selected)
@@ -40,26 +41,73 @@ def brows_dest_path():
 # 이미지 통합
 def merge_image():
 
-    images = [Image.open(x) for x in list_file.get(0, END)]
+    try:
 
-    widths, heights = zip(*(x.size for x in images))
+        # 가로넓이 옵션
+        img_width = cmb_width.get()
+        if img_width == "원본유지":
+            img_width = -1
+        else:
+            img_width = int(img_width)
 
-    max_width, total_height = max(widths), sum(heights)
+        # 간격 옵션
+        img_space = cmb_space.get()
+        if img_space == "좁게":
+            img_space = 30
+        if img_space == "보통":
+            img_space = 60
+        if img_space == "넓게":
+            img_space = 90
+        else:  # 없음
+            img_space = 0
 
-    result_img = Image.new("RGB", (max_width, total_height), (255, 255, 255))
+        # 포맷 옵션
+        img_format = cmb_format.get().lower()
 
-    y_offset = 0  # y의 위치
-    for idx, img in enumerate(images):
-        result_img.paste(img, (0, y_offset))
-        y_offset = img.size[1]
+        images = [Image.open(x) for x in list_file.get(0, END)]
 
-        progress = (idx+1) / len(images) * 100  # 실제 percent 정보를 계산
-        p_var.set(progress)
-        progress_bar.update()
+        # 사이즈처리 : 이미지 사이즈 리스트에 넣어서 하나씩 처리
+        img_sizes = []
+        if img_width > -1:
+            img_sizes = [(int(img_width), int(img_width*x.size[1]/x.size[0]))
+                         for x in images]
+        else:
+            img_sizes = [(x.size[0], x.size[1]) for x in images]
+        # x : y = ' : y'
+        # xy' = x'y
+        # y' = x'y/x
 
-    dest_path = os.path.join(txt_dest_path.get(), "project01_photo.jpg")
-    result_img.save(dest_path)
-    msgbox.showinfo("알림", "작업이 완료")
+        widths, heights = zip(*(img_sizes))
+
+        max_width, total_height = max(widths), sum(heights)
+
+        # 스케치북 준비
+        if img_space > 0:  # total_height(스케치북 높이)에 이미지 간격 옵션 적용
+            total_height += (img_space * (len(images) - 1))
+        result_img = Image.new(
+            "RGB", (max_width, total_height), (255, 255, 255))
+
+        y_offset = 0  # y의 위치
+        for idx, img in enumerate(images):
+            # width가 원본유지가 아닐 때에는 이미지 크기를 조정해야 됨
+            if img_width > -1:
+                img = img.resize(img_sizes[idx])
+
+            result_img.paste(img, (0, y_offset))
+            y_offset += (img.size[1] + img_space)
+
+            progress = (idx + 1) / len(images) * 100  # 실제 percent 정보를 계산
+            p_var.set(progress)
+            progress_bar.update()
+
+        # 포맷 옵션 처리
+        file_name = "project01_photo." + img_format
+        dest_path = os.path.join(txt_dest_path.get(), file_name)
+        result_img.save(dest_path)
+        msgbox.showinfo("알림", "작업이 완료")
+
+    except Exception as err:  # 예외처리
+        msgbox.showerror("에러", err)
 
 
 def start():
